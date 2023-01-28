@@ -1,0 +1,48 @@
+name: Build the app
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+concurrency:
+  # Only run once for latest commit per ref and cancel other (previous) runs.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Scala
+        uses: japgolly/setup-everything-scala@v3.1
+        with:
+          java-version: 'adopt:1.11.0-11'
+          node-version: '16.7.0'
+
+      - name: Check code format
+        run: sbt scalafmtCheckAll
+
+      - name: Compile
+        run: CI=true sbt compile
+
+      - name: Run tests
+        run: CI=true sbt test
+
+      - name: Prepare admin build
+        run: sbt admin/build
+
+      - name: Prepare web build
+        run: sbt web/build
+
+      - name: Prepare server build
+        run: sbt server/dist
